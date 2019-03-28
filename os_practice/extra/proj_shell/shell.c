@@ -37,20 +37,16 @@ int main(int argc, char* argv[]) {
 
     // for batch / interactive mode
     MODE mode;
-    if(argc == INTERACTIVE){
+    if(argc == INTERACTIVE)
         mode = INTERACTIVE;
-    }
-    else{
+    else
         mode = BATCH;
-    }
 
     FILE* input = NULL;
-    if (mode == INTERACTIVE) {
+    if (mode == INTERACTIVE)
         input = stdin;
-    }
-    else if (mode == BATCH) {
+    else if (mode == BATCH)
         input = fopen(argv[1], "r");
-    }
 
     if (input == NULL) {
         fprintf(stderr, "Opening input stream failed.\n");
