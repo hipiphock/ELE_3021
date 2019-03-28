@@ -133,9 +133,8 @@ Command* parse_command(const char* commandString) {
         return NULL;
     }
     tok_end = tok_start;
-    while (!isspace(*tok_end) && *tok_end != '\0') {
+    while (!isspace(*tok_end) && *tok_end != '\0')
         tok_end++;
-    }
     command_struct->cmd = calloc(tok_end - tok_start + 1, sizeof(char));
     strncpy(command_struct->cmd, tok_start, tok_end - tok_start);
 
@@ -143,16 +142,13 @@ Command* parse_command(const char* commandString) {
     tok_end = commandString;
     while (1) {
         tok_start = tok_end;
-        while (isspace(*tok_start) && *tok_start != '\0') {
+        while (isspace(*tok_start) && *tok_start != '\0')
             tok_start++;
-        }
-        if (*tok_start == '\0') {
+        if (*tok_start == '\0')
             return command_struct;
-        }
         tok_end = tok_start;
-        while (!isspace(*tok_end) && *tok_end != '\0') {
+        while (!isspace(*tok_end) && *tok_end != '\0')
             tok_end++;
-        }
         int tok_size = tok_end - tok_start;
         command_struct->argv[command_struct->argc] = calloc(tok_end - tok_start + 1, sizeof(char));
         strncpy(command_struct->argv[command_struct->argc], tok_start, tok_end - tok_start);
