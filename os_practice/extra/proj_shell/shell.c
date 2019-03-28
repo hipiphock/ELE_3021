@@ -62,9 +62,8 @@ int main(int argc, char* argv[]) {
             fflush(stdout);
         }
         buffer = get_input(input);
-        if (buffer == NULL || strcmp(buffer, "quit\n") == 0) {
+        if (buffer == NULL || strcmp(buffer, "quit\n") == 0)
             break;
-        }
         // second 
         cmd_vec = parse_buffer(buffer);
         execute(cmd_vec);
@@ -77,9 +76,8 @@ int main(int argc, char* argv[]) {
 
 char* get_input(FILE* inputFile) {
     char* buffer;
-    if ((buffer = calloc(BUFFER_SIZE, sizeof(char))) == NULL ) {
+    if ((buffer = calloc(BUFFER_SIZE, sizeof(char))) == NULL )
         return NULL;
-    }
     return fgets(buffer, sizeof(*buffer) * BUFFER_SIZE, inputFile);
 }
 
@@ -125,9 +123,9 @@ Command* parse_command(const char* commandString) {
 
     // copy command
     tok_start = commandString;
-    while (isspace(*tok_start) && *tok_start != '\0') {
+    while (isspace(*tok_start) && *tok_start != '\0')
         tok_start++;
-    }
+
     // commandString is a whitespace string or empty string.
     if (*tok_start == '\0') {
         free(command_struct->argv);
