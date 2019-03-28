@@ -27,11 +27,11 @@ typedef enum Mode{
 
 typedef Command** CommandVector;
 
-char* get_input(FILE* infile);
+char* get_input(FILE* inputFile);
 CommandVector parse_buffer(char* buffer);
-Command * parse_command(const char* command_string);
-int execute(const CommandVector command_vec);
-void free_command_vec(CommandVector command_vec);
+Command * parse_command(const char* commandString);
+int execute(const CommandVector commandVector);
+void free_command_vec(CommandVector commandVector);
 
 int main(int argc, char* argv[]) {
 
@@ -75,16 +75,16 @@ int main(int argc, char* argv[]) {
     exit(EXIT_SUCCESS);
 }
 
-char* get_input(FILE* infile) {
+char* get_input(FILE* inputFile) {
     char* buffer;
     if ((buffer = calloc(BUFFER_SIZE, sizeof(char))) == NULL ) {
         return NULL;
     }
-    return fgets(buffer, sizeof(*buffer) * BUFFER_SIZE, infile);
+    return fgets(buffer, sizeof(*buffer) * BUFFER_SIZE, inputFile);
 }
 
 CommandVector parse_buffer(char* buffer) {
-    CommandVector command_vec;
+    CommandVector commandVector;
     size_t command_vec_size;
     size_t command_vec_cap;
     Command* command;
@@ -92,7 +92,7 @@ CommandVector parse_buffer(char* buffer) {
 
     command_vec_size = 0;
     command_vec_cap = 1;
-    command_vec = calloc(command_vec_cap + 1, sizeof(*command_vec));
+    commandVector = calloc(command_vec_cap + 1, sizeof(*commandVector));
     p = strtok(buffer, ";\n");
 
     while (p != NULL) {
@@ -101,19 +101,19 @@ CommandVector parse_buffer(char* buffer) {
             p = strtok(NULL, ";\n");
             continue;
         }
-        command_vec[command_vec_size++] = command;
-        command_vec[command_vec_size] = NULL;
-        // Expand command_vec
+        commandVector[command_vec_size++] = command;
+        commandVector[command_vec_size] = NULL;
+        // Expand commandVector
         if (command_vec_size == command_vec_cap) {
             command_vec_cap *= 2;
-            command_vec = realloc(command_vec, sizeof(*command_vec) * (command_vec_cap + 1));
+            commandVector = realloc(commandVector, sizeof(*commandVector) * (command_vec_cap + 1));
         }
         p = strtok(NULL, ";\n");
     }
-    return command_vec;
+    return commandVector;
 }
 
-Command* parse_command(const char* command_string) {
+Command* parse_command(const char* commandString) {
     Command* command_struct;
     const char* tok_start;
     const char* tok_end;
@@ -124,11 +124,11 @@ Command* parse_command(const char* command_string) {
     command_struct->argv = calloc(command_struct->argv_size + 1, sizeof(*command_struct->argv));
 
     // copy command
-    tok_start = command_string;
+    tok_start = commandString;
     while (isspace(*tok_start) && *tok_start != '\0') {
         tok_start++;
     }
-    // command_string is a whitespace string or empty string.
+    // commandString is a whitespace string or empty string.
     if (*tok_start == '\0') {
         free(command_struct->argv);
         free(command_struct);
@@ -142,7 +142,7 @@ Command* parse_command(const char* command_string) {
     strncpy(command_struct->cmd, tok_start, tok_end - tok_start);
 
     // copy arguments
-    tok_end = command_string;
+    tok_end = commandString;
     while (1) {
         tok_start = tok_end;
         while (isspace(*tok_start) && *tok_start != '\0') {
@@ -168,14 +168,14 @@ Command* parse_command(const char* command_string) {
 }
 
 // execute function
-int execute(const CommandVector command_vec) {
+int execute(const CommandVector commandVector) {
     int ret_value;
     int i;
 
-    for (i = 0; command_vec[i] != NULL; i++) {
+    for (i = 0; commandVector[i] != NULL; i++) {
         Command* command;
         pid_t pid;
-        command = command_vec[i];
+        command = commandVector[i];
         pid = fork();
         // case: child process
         if (pid == 0) {
@@ -203,10 +203,10 @@ int execute(const CommandVector command_vec) {
 }
 
 // function that frees command vector
-void free_command_vec(CommandVector command_vec) {
+void free_command_vec(CommandVector commandVector) {
     int i;
-    for (i = 0; command_vec[i] != NULL; i++) {
-        Command* command = command_vec[i];
+    for (i = 0; commandVector[i] != NULL; i++) {
+        Command* command = commandVector[i];
         int j;
         for (j = 0; j < command->argc; j++) {
             free(command->argv[j]);
@@ -215,5 +215,5 @@ void free_command_vec(CommandVector command_vec) {
         free(command->cmd);
         free(command);
     }
-    free(command_vec);
+    free(commandVector);
 }
