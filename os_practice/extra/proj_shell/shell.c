@@ -103,7 +103,8 @@ CommandVector parse_buffer(char* buffer) {
         }
         command_vec[command_vec_size++] = command;
         command_vec[command_vec_size] = NULL;
-        if (command_vec_size == command_vec_cap) {      // Expand command_vec
+        // Expand command_vec
+        if (command_vec_size == command_vec_cap) {
             command_vec_cap *= 2;
             command_vec = realloc(command_vec, sizeof(*command_vec) * (command_vec_cap + 1));
         }
@@ -127,7 +128,8 @@ Command* parse_command(const char* command_string) {
     while (isspace(*tok_start) && *tok_start != '\0') {
         tok_start++;
     }
-    if (*tok_start == '\0') {	// command_string is a whitespace string or empty string.
+    // command_string is a whitespace string or empty string.
+    if (*tok_start == '\0') {
         free(command_struct->argv);
         free(command_struct);
         return NULL;
@@ -160,8 +162,7 @@ Command* parse_command(const char* command_string) {
         // check if it needs to expand argv
         if (command_struct->argc == command_struct->argv_size) {
             command_struct->argv_size *= 2;
-            command_struct->argv = realloc(command_struct->argv,
-                                           sizeof(*command_struct->argv) * (command_struct->argv_size + 1));
+            command_struct->argv = realloc(command_struct->argv, sizeof(*command_struct->argv) * (command_struct->argv_size + 1));
         }
     }
 }
