@@ -89,3 +89,9 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+// yield system call for project2
+int sys_yield(void){
+    yield();
+    return 0;
+}

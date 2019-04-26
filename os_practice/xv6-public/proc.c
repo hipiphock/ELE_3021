@@ -88,6 +88,7 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
+  p->proctick = 0;      // initializing proctick for FCFS scheduler
 
   release(&ptable.lock);
 
