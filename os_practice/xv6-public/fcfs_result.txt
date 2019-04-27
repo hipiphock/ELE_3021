@@ -1,0 +1,93 @@
+$ p2_fcfs_test
+FCFS test start
+
+Without sleep & yield
+process 5
+process 5
+process 5
+process 5
+process 5
+process 6
+process 6
+process 6
+process 6
+process 6
+process 7
+process 7
+process 7
+process 7
+process 7
+process 8
+process 8
+process 8
+process 8
+process 8
+process 9
+process 9
+process 9
+process 9
+process 9
+
+With yield
+process 10
+process 10
+process 10
+process 10
+process 10
+process 11
+process 11
+process 11
+process 11
+process 11
+process 12
+process 12
+process 12
+process 12
+process 12
+process 13
+process 13
+process 13
+process 13
+process 13
+process 14
+process 14
+process 14
+process 14
+process 14
+
+With sleep
+process 15
+process 16
+process 15
+process 17
+process 15
+process 16
+process 15
+process 17
+process 15
+process 16
+process 17
+process 16
+process 16
+process 17
+process 18
+process 19
+process 17
+process 18
+process 19
+process 18
+process 18
+process 19
+process 18
+process 19
+process 19
+
+Infinite loop
+killed process 20
+killed process 21
+killed process 22
+killed process 23
+killed process 24
+ok
+$ QEMU: Terminated
+

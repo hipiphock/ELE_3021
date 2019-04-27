@@ -354,12 +354,13 @@ scheduler(void)
     // Switch to chosen process.
     if(minproc != NULL){
         p = minproc;
+        p->tickcounts = 0;      // initialize tickcounts when scheduled - for FCFS scheduler
         c->proc = p;
         switchuvm(p);
         p->state = RUNNING;
         swtch(&(c->scheduler), p->context);
         switchkvm();
-        c->proc = 0;      
+        c->proc = 0;  
     }
 
 #else

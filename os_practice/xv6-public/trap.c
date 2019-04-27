@@ -107,8 +107,10 @@ trap(struct trapframe *tf)
 
 #ifdef  FCFS_SCHED
   if(myproc() && myproc()->state == RUNNING &&
-          myproc()->tickcounts >= 100)
+          myproc()->tickcounts >= 100){
     myproc()->killed = 1;
+    cprintf("killed process %d\n", myproc()->pid);
+  }
 #elif   MLFQ_SCHED
 
 #else
