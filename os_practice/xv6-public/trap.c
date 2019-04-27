@@ -51,7 +51,11 @@ trap(struct trapframe *tf)
     if(cpuid() == 0){
       acquire(&tickslock);
       ticks++;
-      myproc()->proctick++;     // added for FCFS scheduler
+#ifdef  FCFS_SCHED
+      // update process's tickcount for FCFS scheduler
+      // myproc()->tickcounts++;
+      ageprocess();
+#endif
       wakeup(&ticks);
       release(&tickslock);
     }
@@ -102,9 +106,9 @@ trap(struct trapframe *tf)
     exit();
 
 #ifdef  FCFS_SCHED
-  if(myproc() && myproc->state == RUNNING &&
-          myproc()->proctick >= 100)
-      exit();
+  if(myproc() && myproc()->state == RUNNING &&
+          myproc()->tickcounts >= 100)
+    myproc()->killed = 1;
 #elif   MLFQ_SCHED
 
 #else

@@ -6,6 +6,7 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+#define NULL 0
 
 struct {
   struct spinlock lock;
@@ -88,7 +89,8 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
-  p->proctick = 0;      // initializing proctick for FCFS scheduler
+  p->createtime = ticks;    // initialized for FCFS scheduler
+  p->tickcounts = 0;        // initialized for FCFS scheduler
 
   release(&ptable.lock);
 
@@ -333,6 +335,35 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
+
+#ifdef  FCFS_SCHED
+    struct proc* minproc;
+    minproc = NULL;
+    // Find the process that is the oldest
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+        if(p->state == RUNNABLE){
+            if(minproc == NULL)
+                minproc = p;
+            else{
+                if(p->createtime < minproc->createtime){
+                    minproc = p;
+                }
+            }
+        }
+    }
+    // Switch to chosen process.
+    if(minproc != NULL){
+        p = minproc;
+        c->proc = p;
+        switchuvm(p);
+        p->state = RUNNING;
+        swtch(&(c->scheduler), p->context);
+        switchkvm();
+        c->proc = 0;      
+    }
+
+#else
+    // Default case: using Round Robin
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
         continue;
@@ -351,6 +382,7 @@ scheduler(void)
       // It should have changed its p->state before coming back.
       c->proc = 0;
     }
+#endif
     release(&ptable.lock);
 
   }
@@ -532,4 +564,16 @@ procdump(void)
     }
     cprintf("\n");
   }
+}
+
+// function for FCFS scheduler
+// increase the process's tickcounts
+void ageprocess(){
+    struct proc* p;
+    acquire(&ptable.lock);
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+        if(p->state == RUNNING)
+            p->tickcounts++;
+    }
+    release(&ptable.lock);
 }
