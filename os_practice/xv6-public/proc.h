@@ -49,8 +49,12 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+
   uint createtime;             // added for FCFS scheduler
   uint tickcounts;             // added for FCFS scheduler
+
+  int currentlevel;            // added for MLFQ scheduler
+  int priority;                // added for MLFQ scheduler
 };
 
 // Process memory is laid out contiguously, low addresses first:
@@ -59,4 +63,7 @@ struct proc {
 //   fixed-size stack
 //   expandable heap
 
-void ageprocess();
+void ageprocess();                          // added for FCFS scheduler
+int getlev(void);                           // added for MLFQ scheduler
+void setpriority(int pid, int priority);    // added for MLFQ scheduler
+void monopolize(int password);              // added for MLFQ scheduler

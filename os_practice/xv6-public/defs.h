@@ -120,6 +120,10 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
+int             getlev(void);
+void            setpriority(int pid, int priority);
+void            monopolize(int password);
+
 
 // swtch.S
 void            swtch(struct context**, struct context*);

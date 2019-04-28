@@ -25,6 +25,11 @@ int sleep(int);
 int uptime(void);
 int yield(void);
 
+// system calls added for MLFQ scheduler
+int getlev(void);
+void setpriority(int pid, int priority);
+void monopolize(int password);
+
 // ulib.c
 int stat(const char*, struct stat*);
 char* strcpy(char*, const char*);

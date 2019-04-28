@@ -90,8 +90,27 @@ sys_uptime(void)
   return xticks;
 }
 
-// yield system call for project2
+// added for FCFS & MLFQ scheduler
 int sys_yield(void){
     yield();
+    return 0;
+}
+
+// added for MLFQ scheduler
+int sys_getlev(void){
+    int level;
+    level = getlev();
+    return level;
+}
+
+// added for MLFQ scheduler
+int sys_setpriority(int pid, int priority){
+    sys_setpriority(pid, priority);
+    return 0;
+}
+
+// added for MLFQ scheduler
+int sys_monopolize(int password){
+    monopolize(password);
     return 0;
 }

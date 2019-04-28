@@ -13,6 +13,20 @@ struct {
   struct proc proc[NPROC];
 } ptable;
 
+// L0 queue for MLFQ scheduler
+struct {
+  struct spinlock lock;
+  struct proc proc[NPROC];
+  uint size;
+} L0;
+
+// L1 queue for MLFQ scheduler
+struct {
+  struct spinlock lock;
+  struct proc proc[NPROC];
+  uint size;
+} L1;
+
 static struct proc *initproc;
 
 int nextpid = 1;
@@ -577,4 +591,20 @@ void ageprocess(){
             p->tickcounts++;
     }
     release(&ptable.lock);
+}
+
+// function for MLFQ scheduler
+int getlev(void){
+    
+    return 0;
+}
+
+// function for MLFQ scheduler
+void setpriority(int pid, int priority){
+
+}
+
+// function for MLFQ scheduler
+void monopolize(int password){
+
 }
