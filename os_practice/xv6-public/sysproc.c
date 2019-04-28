@@ -98,14 +98,13 @@ int sys_yield(void){
 
 // added for MLFQ scheduler
 int sys_getlev(void){
-    int level;
-    level = getlev();
+    int level = getlev();
     return level;
 }
 
 // added for MLFQ scheduler
 int sys_setpriority(int pid, int priority){
-    sys_setpriority(pid, priority);
+    setpriority(pid, priority);
     return 0;
 }
 

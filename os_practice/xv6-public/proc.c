@@ -7,25 +7,12 @@
 #include "proc.h"
 #include "spinlock.h"
 #define NULL 0
+#define PASSWORD 2016025423
 
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
 } ptable;
-
-// L0 queue for MLFQ scheduler
-struct {
-  struct spinlock lock;
-  struct proc proc[NPROC];
-  uint size;
-} L0;
-
-// L1 queue for MLFQ scheduler
-struct {
-  struct spinlock lock;
-  struct proc proc[NPROC];
-  uint size;
-} L1;
 
 static struct proc *initproc;
 
@@ -103,8 +90,12 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
+
   p->createtime = ticks;    // initialized for FCFS scheduler
   p->tickcounts = 0;        // initialized for FCFS scheduler
+
+  p->level = 0;             // initialized for MLFQ scheduler
+  p->priority = 0;          // initialized for MLFQ scheduler
 
   release(&ptable.lock);
 
@@ -351,8 +342,7 @@ scheduler(void)
     acquire(&ptable.lock);
 
 #ifdef  FCFS_SCHED
-    struct proc* minproc;
-    minproc = NULL;
+    struct proc* minproc = NULL;
     // Find the process that is the oldest
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
         if(p->state == RUNNABLE){
@@ -375,6 +365,62 @@ scheduler(void)
         swtch(&(c->scheduler), p->context);
         switchkvm();
         c->proc = 0;  
+    }
+
+#elif   MLFQ_SCHED
+    // first, search for level 0
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+       if(p->level == 0){
+           if(p->state == RUNNABLE){
+               p->level = 1;
+               c->proc = p;
+               switchuvm(p);
+               p->state = RUNNING;
+
+               swtch(&(c->scheduler), p->context);
+               switchkvm();
+
+               c->proc = 0;
+           }
+       }
+    }
+    // if there were runnable p with level 0,
+    // this if case would be ignored.
+    struct proc* maxproc = NULL;
+    if(p == &ptable.proc[NPROC]){
+        for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+            if(p->state == RUNNABLE){
+                if(maxproc == NULL)
+                    maxproc = p;
+                else
+                    if(maxproc->priority < p->priority)
+                        maxproc = p;
+                if(maxproc->priority == 10){
+                    p = maxproc;
+                    c->proc = p;
+                    switchuvm(p);
+                    p->state = RUNNING;
+
+                    swtch(&(c->scheduler), p->context);
+                    switchkvm();
+
+                    c->proc = 0;
+                    maxproc = NULL;
+                    break;
+                }
+            }
+        }
+        if(maxproc != NULL){
+            p = maxproc;
+            c->proc = p;
+            switchuvm(p);
+            p->state = RUNNING;
+
+            swtch(&(c->scheduler), p->context);
+            switchkvm();
+        
+            c->proc = 0;
+        }
     }
 
 #else
@@ -586,25 +632,48 @@ procdump(void)
 void ageprocess(){
     struct proc* p;
     acquire(&ptable.lock);
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
         if(p->state == RUNNING)
             p->tickcounts++;
+    
+    release(&ptable.lock);
+}
+
+// function for MLFQ scheduler
+// boost processes
+void boostprocess(){
+    struct proc* p;
+    acquire(&ptable.lock);
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+        p->level = 0;
+        p->priority = 0;
     }
     release(&ptable.lock);
 }
 
 // function for MLFQ scheduler
 int getlev(void){
-    
-    return 0;
+    int level = myproc()->level;
+    return level;
 }
 
 // function for MLFQ scheduler
 void setpriority(int pid, int priority){
+    
+    // case: priority not between 0 and 10
+    if(priority < 0 || priority > 10)
+        return;
 
+    // normal case
+    struct proc* p;
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+        if(p->pid == pid){
+            p->priority = priority;
+            return;
+        }
 }
 
 // function for MLFQ scheduler
 void monopolize(int password){
-
+    if(password == PASSWORD);
 }

@@ -53,7 +53,7 @@ struct proc {
   uint createtime;             // added for FCFS scheduler
   uint tickcounts;             // added for FCFS scheduler
 
-  int currentlevel;            // added for MLFQ scheduler
+  int level;                   // added for MLFQ scheduler
   int priority;                // added for MLFQ scheduler
 };
 
@@ -64,6 +64,7 @@ struct proc {
 //   expandable heap
 
 void ageprocess();                          // added for FCFS scheduler
+void boostprocess();                        // added for MLFQ scheduler
 int getlev(void);                           // added for MLFQ scheduler
 void setpriority(int pid, int priority);    // added for MLFQ scheduler
 void monopolize(int password);              // added for MLFQ scheduler

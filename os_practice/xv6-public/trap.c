@@ -55,6 +55,11 @@ trap(struct trapframe *tf)
       // update process's tickcount for FCFS scheduler
       // myproc()->tickcounts++;
       ageprocess();
+#elif   MLFQ_SCHED
+      ageprocess();
+      // priority boosting
+      if(ticks % 100 == 0)
+          boostprocess();
 #endif
       wakeup(&ticks);
       release(&tickslock);
@@ -111,16 +116,35 @@ trap(struct trapframe *tf)
     myproc()->killed = 1;
     cprintf("killed process %d\n", myproc()->pid);
   }
-#elif   MLFQ_SCHED
 
+#elif   MLFQ_SCHED
+  // if it is from L0
+  if(myproc() && myproc()->state == RUNNING &&
+          tf->trapno == T_IRQ0 + IRQ_TIMER &&
+          myproc()->level == 0 && myproc()->tickcounts == 4){
+      myproc()->tickcounts = 0;
+      myproc()->level = 1;
+      yield();
+  }
+
+  // if it is from L1
+  if(myproc() && myproc()->state == RUNNING &&
+          tf->trapno == T_IRQ0 + IRQ_TIMER &&
+          myproc()->level == 1 && myproc()->tickcounts == 8){
+      myproc()->tickcounts = 0;
+      if(myproc()->priority >= 1)
+          myproc()->priority--;
+      yield();
+  }
+ 
 #else
   // Force process to give up CPU on clock tick.
   // If interrupts were on while locks held, would need to check nlock.
   if(myproc() && myproc()->state == RUNNING &&
      tf->trapno == T_IRQ0+IRQ_TIMER)
     yield();
-#endif
 
+#endif
   // Check if the process has been killed since we yielded
   if(myproc() && myproc()->killed && (tf->cs&3) == DPL_USER)
     exit();
