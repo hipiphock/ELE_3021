@@ -675,5 +675,8 @@ void setpriority(int pid, int priority){
 
 // function for MLFQ scheduler
 void monopolize(int password){
-    if(password == PASSWORD);
+    if(password != PASSWORD){
+        cprintf("Wrong Password!\n");
+        myproc()->killed = 1;
+    }
 }
