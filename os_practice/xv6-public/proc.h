@@ -55,6 +55,8 @@ struct proc {
 
   int level;                   // added for MLFQ scheduler
   int priority;                // added for MLFQ scheduler
+
+  int isthread;                // added for thread implementation
 };
 
 // Process memory is laid out contiguously, low addresses first:
