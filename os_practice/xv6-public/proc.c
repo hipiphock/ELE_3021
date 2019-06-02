@@ -680,3 +680,165 @@ void monopolize(int password){
         myproc()->killed = 1;
     }
 }
+
+
+/**
+ * the followings were added for thread implementation
+ */
+
+thread_t nexttid = 1;
+
+/**
+ * Creates a new thread.
+ * Returns 0 on success.
+ */
+int thread_create(thread_t* thread, void*(*start_routine)(void*), void* arg){
+
+    int i;
+    uint sz, sp, vmba;
+    pde_t* pgdir;
+    struct proc *np;
+    struct proc *curproc = myproc();
+    struct proc *original = curproc->original ? curproc->original : curproc;
+
+    // Allocate process
+    if((np = allocproc()) == 0)
+        return -1;
+    nextpid--;
+
+    // Set the thread's basic properties
+    np->original = original;
+    np->pid = original->pid;
+    np->tid = nexttid++;
+
+    acquire(&ptable.lock);
+    pgdir = original->pgdir;
+    
+    // Use the empty memory of the process first.
+    // If there is no memory, increase the virtual memory
+    // and give the new memory at the top.
+    if(original->emptyvm.size)
+        vmba = original->emptyvm.data[--original->emptyvm.size];
+    else{
+        vmba = original->sz;
+        original->sz += 2 * PGSIZE;
+    }
+
+    // Allocate two pages for current thread
+    if((sz = allocuvm(pgdir, vmba, vmba + 2 * PGSIZE)) == 0){
+        // case: allocation failed
+        np->state = UNUSED;
+        return -1;
+    }
+    release(&ptable.lock);
+
+    // Set the state of np
+    *np->tf = *original->tf;
+    
+    for(i = 0; i < NOFILE; i++)
+        if(original->ofile[i])
+            np->ofile[i] = filedup(original->ofile[i]);
+    np->cwd = idup(original->cwd);
+
+    safestrcpy(np->name, original->name, sizeof(original->name));
+
+    sp = sz - 4;
+    *((uint*)sp) = (uint)arg;   // arg
+    sp -= 4;
+    *((uint*)sp) = 0xffffffff;  // PC
+    np->pgdir = pgdir;
+    np->vmba = vmba;
+    np->sz = sz;
+    np->tf->eip = (uint)start_routine;  // entry point
+    np->tf->esp = sp;   // stack pointer
+    
+    *thread = np->tid;
+
+    // Make the new thread runnable
+    acquire(&ptable.lock);
+    np->state = RUNNABLE;
+    release(&ptable.lock);
+
+    return 0;
+}
+
+/**
+ * Terminates the thread
+ */
+void thread_exit(void* retval){
+
+    struct proc *curproc = myproc();
+    int fd;
+
+    for(fd = 0; fd < NOFILE; fd++){
+        if(curproc->ofile[fd]){
+            fileclose(curproc->ofile[fd]);
+            curproc->ofile[fd] = 0;
+        }
+    }
+
+    begin_op();
+    iput(curproc->cwd);
+    end_op();
+    curproc->cwd = 0;
+
+    acquire(&ptable.lock);
+
+    curproc->tmp_retval = retval;
+
+    // Original process might be sleeping in wait().
+    wakeup1(curproc->original);
+    
+    // Jump into the scheduler, never to return.
+    curproc->state = ZOMBIE;
+    sched();
+    panic("zombie exit");
+}
+
+/**
+ * join the thread
+ */
+int thread_join(thread_t thread, void** retval){
+    
+    struct proc *p;
+    struct proc *curproc = myproc();
+
+    // Only original process can call thread_join
+    if(curproc->tid == 0)
+        return -1;
+    
+    acquire(&ptable.lock);
+    for(;;){
+        for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+            if(p->tid != thread) continue;
+
+            if(p->original != curproc){
+                release(&ptable.lock);
+                return -1;
+            }
+
+            if(p->state == ZOMBIE){
+                *retval = p->tmp_retval;
+                kfree(p->kstack);
+                p->kstack = 0;
+                p->pid = 0;
+                p->parent = 0;
+                p->original = 0;
+                p->name[0] = 0;
+                p->killed = 0;
+                p->state = UNUSED;
+                release(&ptable.lock);
+                return 0;
+            }
+        }
+
+        if(curproc->killed){
+            release(&ptable.lock);
+            return -1;
+        }
+
+        // Wait for thread to exit
+        sleep(curproc, &ptable.lock);
+    }
+    return 0;
+}

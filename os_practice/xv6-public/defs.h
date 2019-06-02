@@ -9,6 +9,7 @@ struct spinlock;
 struct sleeplock;
 struct stat;
 struct superblock;
+typedef int thread_t;   // added for thread implementation
 
 // bio.c
 void            binit(void);
@@ -159,6 +160,11 @@ int             argstr(int, char**);
 int             fetchint(uint, int*);
 int             fetchstr(uint, char**);
 void            syscall(void);
+
+// thread.c
+int             thread_create(thread_t*, void*(void*), void*);
+void            thread_exit(void*);
+int             thread_join(thread_t, void**);
 
 // timer.c
 void            timerinit(void);

@@ -113,3 +113,21 @@ int sys_monopolize(int password){
     monopolize(password);
     return 0;
 }
+
+// added for thread implementation
+int sys_thread_create(thread_t* thread, void*(*start_routine)(void*), void* arg){
+    thread_create(thread, (*start_routine), arg);
+    return 0;
+}
+
+// added for thread implementation
+int sys_thread_exit(void* retval){
+    thread_exit(retval);
+    return 0;
+}
+
+// added for thread implementation
+int sys_thread_join(thread_t thread, void** retval){
+    thread_join(thread, retval);
+    return 0;
+}

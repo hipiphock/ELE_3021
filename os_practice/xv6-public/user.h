@@ -1,5 +1,6 @@
 struct stat;
 struct rtcdate;
+typedef int thread_t;
 
 // system calls
 int fork(void);
@@ -29,6 +30,11 @@ int yield(void);
 int getlev(void);
 void setpriority(int pid, int priority);
 void monopolize(int password);
+
+// system calls added for thread implementation
+int thread_create(thread_t* thread, void*, void*);
+int thread_exit(void*);
+int thread_join(thread_t thread, void**);
 
 // ulib.c
 int stat(const char*, struct stat*);

@@ -34,6 +34,13 @@ struct context {
 
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
+// helper structure for thread's resoruce clean-up
+struct emptyvm{
+    uint data[NPROC];
+    int size;
+};
+
+
 // Per-process state
 struct proc {
   uint sz;                     // Size of process memory (bytes)
@@ -50,13 +57,20 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
 
-  uint createtime;             // added for FCFS scheduler
-  uint tickcounts;             // added for FCFS scheduler
+  // added for FCFS scheduler
+  uint createtime;             
+  uint tickcounts;             
 
-  int level;                   // added for MLFQ scheduler
-  int priority;                // added for MLFQ scheduler
+  // added for MLFQ scheduler
+  int level;                   
+  int priority;
 
-  int isthread;                // added for thread implementation
+  // added for thead implementation
+  int tid;                     // thread id. 0 if it is process
+  struct proc* original;       // original process for this thread
+  void* tmp_retval;            // temporary value for thread_exit
+  uint vmba;                   // base address of virtual memory
+  struct emptyvm emptyvm;      // empty memory space of original process
 };
 
 // Process memory is laid out contiguously, low addresses first:
@@ -65,8 +79,21 @@ struct proc {
 //   fixed-size stack
 //   expandable heap
 
+/**
+ * added for scheduler implementation
+ */
 void ageprocess();                          // added for FCFS scheduler
 void boostprocess();                        // added for MLFQ scheduler
 int getlev(void);                           // added for MLFQ scheduler
 void setpriority(int pid, int priority);    // added for MLFQ scheduler
 void monopolize(int password);              // added for MLFQ scheduler
+
+
+/**
+ * added for thread implementation
+ */
+typedef int thread_t;
+
+int thread_create(thread_t* thread, void*(*start_routine)(void*), void* arg);
+void thread_exit(void* retval);
+int thread_join(thread_t thread, void** retval);
