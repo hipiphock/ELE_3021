@@ -56,15 +56,12 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
-
   // added for FCFS scheduler
   uint createtime;             
   uint tickcounts;             
-
   // added for MLFQ scheduler
   int level;                   
   int priority;
-
   // added for thead implementation
   int tid;                     // thread id. 0 if it is process
   struct proc* original;       // original process for this thread
@@ -79,9 +76,8 @@ struct proc {
 //   fixed-size stack
 //   expandable heap
 
-/**
- * added for scheduler implementation
- */
+
+// added for scheduler implementation
 void ageprocess();                          // added for FCFS scheduler
 void boostprocess();                        // added for MLFQ scheduler
 int getlev(void);                           // added for MLFQ scheduler
@@ -89,11 +85,11 @@ void setpriority(int pid, int priority);    // added for MLFQ scheduler
 void monopolize(int password);              // added for MLFQ scheduler
 
 
-/**
- * added for thread implementation
- */
+// added for thread implementation
 typedef int thread_t;
 
 int thread_create(thread_t* thread, void*(*start_routine)(void*), void* arg);
 void thread_exit(void* retval);
 int thread_join(thread_t thread, void** retval);
+void put_to_sleep(int pid, struct proc* exception);
+void wake_up_again(int pid, struct proc* exception);

@@ -91,11 +91,12 @@ found:
   p->state = EMBRYO;
   p->pid = nextpid++;
 
-  p->createtime = ticks;    // initialized for FCFS scheduler
-  p->tickcounts = 0;        // initialized for FCFS scheduler
-
-  p->level = 0;             // initialized for MLFQ scheduler
-  p->priority = 0;          // initialized for MLFQ scheduler
+  // initialized for FCFS scheduler
+  p->createtime = ticks;
+  p->tickcounts = 0;
+  // initialized for MLFQ scheduler
+  p->level = 0;
+  p->priority = 0;
 
   release(&ptable.lock);
 
@@ -119,6 +120,11 @@ found:
   p->context = (struct context*)sp;
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
+
+  // initialized for threada implementation
+  // this differenciate process from thread
+  p->tid = 0;
+  p->original = 0;
 
   return p;
 }
@@ -162,24 +168,35 @@ userinit(void)
 }
 
 // Grow current process's memory by n bytes.
-// Return 0 on success, -1 on failure.
+// Return oldsz on success, -1 on failure.
 int
 growproc(int n)
 {
-  uint sz;
+  uint sz, oldsz;
   struct proc *curproc = myproc();
+  struct proc *p;   // added for thread implementation
 
-  sz = curproc->sz;
+  acquire(&ptable.lock);
+
+  p = (curproc->original) ? curproc->original : curproc;
+
+  sz = p->sz;
+  oldsz = sz;
   if(n > 0){
-    if((sz = allocuvm(curproc->pgdir, sz, sz + n)) == 0)
+    if((sz = allocuvm(curproc->pgdir, sz, sz + n)) == 0){
+      release(&ptable.lock);
       return -1;
+    }
   } else if(n < 0){
-    if((sz = deallocuvm(curproc->pgdir, sz, sz + n)) == 0)
+    if((sz = deallocuvm(curproc->pgdir, sz, sz + n)) == 0){
+      release(&ptable.lock);
       return -1;
+    }
   }
-  curproc->sz = sz;
+  p->sz = sz;
+  release(&ptable.lock);
   switchuvm(curproc);
-  return 0;
+  return oldsz;
 }
 
 // Create a new process copying p as the parent.
@@ -197,8 +214,15 @@ fork(void)
     return -1;
   }
 
-  // Copy process state from proc.
-  if((np->pgdir = copyuvm(curproc->pgdir, curproc->sz)) == 0){
+  // Copy process state form proc.
+  // Memory space is managed by original process
+  if(curproc->tid != 0)
+      //thread use original's sz
+      np->pgdir = copyuvm(curproc->pgdir, curproc->original->sz);
+  else
+      np->pgdir = copyuvm(curproc->pgdir, curproc->sz);
+  // if((np->pgdir = copyuvm(curproc->pgdir, curproc->sz)) == 0){
+  if(np->pgdir == 0){
     kfree(np->kstack);
     np->kstack = 0;
     np->state = UNUSED;
@@ -237,10 +261,50 @@ exit(void)
 {
   struct proc *curproc = myproc();
   struct proc *p;
-  int fd;
+  int fd, threadnum;
 
   if(curproc == initproc)
     panic("init exiting");
+
+  // First, check for threads.
+  // You must kill all of the threads to exit.
+  if(curproc->tid == 0){
+    acquire(&ptable.lock);
+    for(;;){
+      threadnum = 0;
+      for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+        if(p->original == curproc){
+          // case: thread p is already zombie
+          if(p->state == ZOMBIE){
+            // clean up
+            kfree(p->kstack);
+            p->kstack = 0;
+            p->original->emptyvm.data[p->original->emptyvm.size++] = p->vmba;
+            p->pid = 0;
+            p->parent = 0;
+            p->original = 0;
+            p->name[0] = 0;
+            p->killed = 0;
+            p->state = UNUSED;
+            deallocuvm(p->pgdir, p->sz, p->vmba);
+          }
+          // case: thread p is not zombie
+          else{
+            // kill the thread
+            threadnum++;
+            p->killed = 1;
+            wakeup1(p);
+          }
+        }
+      }
+      if(threadnum == 0){
+        release(&ptable.lock);
+        break;
+      }
+      // wait for thread to exit.
+      sleep(curproc, &ptable.lock);
+    }
+  }
 
   // Close all open files.
   for(fd = 0; fd < NOFILE; fd++){
@@ -257,8 +321,19 @@ exit(void)
 
   acquire(&ptable.lock);
 
-  // Parent might be sleeping in wait().
-  wakeup1(curproc->parent);
+  // case: process
+  if(curproc->tid == 0)
+    // Parent might be sleeping in wait().
+    wakeup1(curproc->parent);
+
+  // case: thread
+  else{
+    // case: original process is alive
+    if(curproc->original){
+      curproc->original->killed = 1;
+      wakeup1(curproc->original);
+    }
+  }
 
   // Pass abandoned children to init.
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
@@ -752,7 +827,7 @@ int thread_create(thread_t* thread, void*(*start_routine)(void*), void* arg){
     np->tf->eip = (uint)start_routine;  // entry point
     np->tf->esp = sp;   // stack pointer
     
-    *thread = np->tid;
+    *thread = np->tid;  // fucking error
 
     // Make the new thread runnable
     acquire(&ptable.lock);
@@ -804,7 +879,7 @@ int thread_join(thread_t thread, void** retval){
     struct proc *curproc = myproc();
 
     // Only original process can call thread_join
-    if(curproc->tid == 0)
+    if(curproc->tid != 0)
         return -1;
     
     acquire(&ptable.lock);
@@ -821,12 +896,14 @@ int thread_join(thread_t thread, void** retval){
                 *retval = p->tmp_retval;
                 kfree(p->kstack);
                 p->kstack = 0;
+                p->original->emptyvm.data[p->original->emptyvm.size++] = p->vmba;
                 p->pid = 0;
                 p->parent = 0;
                 p->original = 0;
                 p->name[0] = 0;
                 p->killed = 0;
                 p->state = UNUSED;
+                deallocuvm(p->pgdir, p->sz, p->vmba);
                 release(&ptable.lock);
                 return 0;
             }
@@ -841,4 +918,53 @@ int thread_join(thread_t thread, void** retval){
         sleep(curproc, &ptable.lock);
     }
     return 0;
+}
+
+// Helper function for exec system call
+// Make other processes and threads with given pid go to sleep
+// except for the exception.
+// The process with given pid will start a new program in exec.
+void put_to_sleep(int pid, struct proc* exception){
+
+    struct proc* p;
+
+    acquire(&ptable.lock);
+
+    if(myproc()->killed){
+        release(&ptable.lock);
+        return;
+    }
+
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+        if(p->pid == pid && p != exception){
+            p->killed = 1;
+            p->chan = 0;
+            p->state = SLEEPING;
+        }
+    }
+    release(&ptable.lock);
+}
+
+// Helper function for exec system call
+// Wake up the previous processes and threads with given pid
+// except for the exception.
+void wake_up_again(int pid, struct proc* exception){
+    
+    int childexist = 0;
+    struct proc* p;
+
+    acquire(&ptable.lock);
+
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+        if(p->pid == pid && p != exception){
+            p->state = RUNNABLE;
+            if(p->parent){
+                p->parent = exception;
+                childexist = 1;
+            }
+        }
+    }
+    release(&ptable.lock);
+    if(childexist)
+        wait();
 }

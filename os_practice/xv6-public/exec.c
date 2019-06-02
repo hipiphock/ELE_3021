@@ -18,6 +18,18 @@ exec(char *path, char **argv)
   struct proghdr ph;
   pde_t *pgdir, *oldpgdir;
   struct proc *curproc = myproc();
+  int oldtid = 0;
+
+  // If thread calls exec system call,
+  // every thread except one must be destroyed.
+  // One survived thread will start the new program.
+  if(curproc->tid != 0){
+    curproc->parent = curproc->original->parent;
+    curproc->original = 0;
+    oldtid = curproc->tid;
+    curproc->tid = 0;
+  }
+  put_to_sleep(curproc->pid, curproc);
 
   begin_op();
 
@@ -100,7 +112,10 @@ exec(char *path, char **argv)
   curproc->tf->eip = elf.entry;  // main
   curproc->tf->esp = sp;
   switchuvm(curproc);
-  freevm(oldpgdir);
+  // case: not a thread. process
+  if(oldtid == 0)
+    freevm(oldpgdir);
+  wake_up_again(curproc->pid, curproc);
   return 0;
 
  bad:
@@ -110,5 +125,6 @@ exec(char *path, char **argv)
     iunlockput(ip);
     end_op();
   }
+  wake_up_again(curproc->pid, curproc);
   return -1;
 }
