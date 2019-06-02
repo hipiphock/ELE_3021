@@ -125,6 +125,7 @@ found:
   // this differenciate process from thread
   p->tid = 0;
   p->original = 0;
+  memset(&p->emptyvm, 0, sizeof(p->emptyvm));
 
   return p;
 }
